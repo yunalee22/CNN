@@ -291,6 +291,7 @@ class FullyConnectedNet(object):
     ############################################################################
     
     cache = []
+    cache_dropout = []
     curr_input = X
     
     # Iterate through hidden layers
@@ -302,6 +303,10 @@ class FullyConnectedNet(object):
             
         else:
             curr_out, curr_cache = affine_relu_forward(curr_input, self.params['W' + str(i+1)], self.params['b' + str(i+1)])
+            
+        if self.use_dropout:
+            curr_out, curr_cache_dropout = dropout_forward(curr_out, self.dropout_param)
+            cache_dropout.append(curr_cache_dropout)
         
         cache.append(curr_cache)
         curr_input = curr_out
@@ -351,10 +356,14 @@ class FullyConnectedNet(object):
         loss += 0.5 * self.reg * np.sum(np.square(self.params['W' + str(i+1)]))
         
         # Compute gradients for current layer
+        if self.use_dropout:
+          dx = dropout_backward(dx, cache_dropout[i])
+        
         if self.use_batchnorm:
           dx, dw, db, dgamma, dbeta = affine_batchnorm_relu_backward(dx, cache[i])
           grads['gamma' + str(i+1)] = dgamma
           grads['beta' + str(i+1)] = dbeta
+        
         else:
           dx, dw, db = affine_relu_backward(dx, cache[i])
         
